@@ -270,9 +270,7 @@ class ShapeLayer {
             newShapePoints = crystalPoints(int(random(0, 2)), 0.4, this.fillRatio);
         }
 
-        let newShapeColor = color(random(palette));
-        if (random() < 0.01)
-            newShapeColor = color('black');
+        let newShapeColor = nowColorSet.getRandomColor();
 
         let newShape = new MorphShape(shapeX, shapeY, this.layerWidth, this.layerHeight, newShapePoints, newShapeColor);
         return newShape;
@@ -309,4 +307,27 @@ class ShapeLayer {
     //         }
     //     }
     // }
+}
+
+class PaletteSet {
+    constructor(_colorCodes, _bgColorCode, _specialColorCode, _normalMode, _specialMode, _specialChance = 0.03) {
+
+        this.mainColors = [];
+        for(let i=0; i< _colorCodes.length; i++) {
+            this.mainColors.push(color(_colorCodes[i]));
+        }
+        
+        this.bgColor = color(_bgColorCode);
+        this.specialColor = color(_specialColorCode);
+        this.specialColorMode = _specialMode;
+        this.normalColorMode = _normalMode;
+        this.specialColorChance = 0.03;
+    }
+
+    getRandomColor () {
+        if(random() < this.specialColorChance)
+            return this.specialColor;
+        else
+            return random(this.mainColors);
+    }
 }

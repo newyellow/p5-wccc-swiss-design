@@ -12,12 +12,16 @@
 // https://www.swissted.com/products/david-bowie-at-dunstable-civic-center-1972
 //
 
-let palette = ['#e02d26', '#ffb700', '#0166be', '#0166be'];
+let palettes = [];
 let gridFormats = [];
 let layerPossiblePoints = [];
 let possibleEasings = [];
 
 let shapes = [];
+
+let nowColorSet = null;
+let nowBGColor = null;
+let nextBGColor = null;
 
 async function setup() {
   let canvasWidth = 1800;
@@ -51,6 +55,11 @@ async function setup() {
     easeInOutSine, easeInOutQuad, easeInOutCubic,
   ];
 
+  let setAColorCodes = ['#e02d26', '#ffb700', '#0166be', '#0166be'];
+  palettes[0] = new PaletteSet(setAColorCodes, '#f9dcbc', '#000000', MULTIPLY, MULTIPLY);
+
+  // let setBColorCodes = ['#76e8cf', '#337cc4', '#5a18de', '#1e9e62'];
+  // palettes[1] = new PaletteSet(setBColorCodes, '#1b1f3b', '#FFFFFF', ADD, ADD);
 
   frameRate(60);
   // layer method
@@ -106,23 +115,50 @@ async function setup() {
   let shapeCount = 120;
   let layerCount = 4;
 
+
   while (true) {
 
     // re-generate layers
     layers = [];
     bgLayer = null;
 
-    bgLayer = generateLayerByGridFormat(gridFormats[0]);
-
+    nowColorSet = random(palettes);
     // for (let i = 0; i < layerCount; i++) {
     //   let randomFormatIndex = int(random(1, gridFormats.length));
     //   let newLayer = generateLayerByGridFormat(gridFormats[randomFormatIndex], 0.6);
     //   layers.push(newLayer);
     // }
-    
+
     // layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 1.0, 2, false, false));
-    layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.95, 2, false, false));
-    layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.6, 2, false, false));
+    let layoutType = int(random(0, 5));
+
+    if (layoutType == 0) {
+      bgLayer = generateLayerByGridFormat(gridFormats[0], 0.95);
+      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.95, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.6, 2, false, false));
+    }
+    else if (layoutType == 1) {
+      bgLayer = generateLayerByGridFormat(gridFormats[1], 0.95);
+      layers.push(new ShapeLayer(gridFormats[1].x, gridFormats[1].y, 0.9, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.9, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[3].x, gridFormats[3].y, 0.9, 2, false, false));
+    }
+    else if (layoutType == 2) {
+      bgLayer = generateLayerByGridFormat(gridFormats[0], 1.0);
+      layers.push(new ShapeLayer(gridFormats[1].x, gridFormats[1].y, 1.0, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 1.0, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[3].x, gridFormats[3].y, 1.0, 2, false, false));
+    }
+    else if (layoutType == 3) {
+      bgLayer = null;
+      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.95, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[3].x, gridFormats[3].y, 0.9, 2, false, false));
+    }
+    else if (layoutType == 4) {
+      bgLayer = null;
+      layers.push(new ShapeLayer(gridFormats[1].x, gridFormats[1].y, 0.95, 2, false, false));
+      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.9, 2, false, false));
+    }
 
     // init first shapes
     let newShapes = [];
@@ -130,7 +166,7 @@ async function setup() {
       let targetShapeLayer = random(layers);
       let newShape = null;
 
-      if(bgLayer != null && random() < 0.048)
+      if (bgLayer != null && random() < 0.048)
         newShape = bgLayer.getRandomShape();
       else
         newShape = targetShapeLayer.getRandomShape();
@@ -169,7 +205,7 @@ async function setup() {
         nowTriggeredIndex = toIndex;
         await sleep(30);
       }
-      
+
       await sleep(3000);
     }
 
@@ -193,7 +229,7 @@ function draw() {
   drawLayerShapes(shapes);
 }
 
-function generateLayerByGridFormat (_gridFormat, _fillRatio) {
+function generateLayerByGridFormat(_gridFormat, _fillRatio) {
   let nowGrid = _gridFormat;
   let fillRatio = _fillRatio;
   let offsetX = false;
