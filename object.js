@@ -1,34 +1,7 @@
-class NYColor {
-    constructor(_h, _s, _b, _a = 1.0) {
-        this.h = _h;
-        this.s = _s;
-        this.b = _b;
-        this.a = _a;
-    }
-
-    copy() {
-        return new NYColor(this.h, this.s, this.b, this.a);
-    }
-
-    slightRandomize(_hDiff = 10, _sDiff = 12, _bDiff = 12, _aDiff = 0.0) {
-        this.h += random(-0.5 * _hDiff, 0.5 * _hDiff);
-        this.s += random(-0.5 * _sDiff, 0.5 * _sDiff);
-        this.b += random(-0.5 * _bDiff, 0.5 * _bDiff);
-        this.a += random(-0.5 * _aDiff, 0.5 * _aDiff);
-
-        this.h = processHue(this.h);
-    }
-
-    color() {
-        return color(this.h, this.s, this.b, this.a);
-    }
-
-    static newRandomColor(_mainHue) {
-        let h = processHue(_mainHue + random(-80, 80));
-        let s = random(40, 100);
-        let b = random(60, 100);
-
-        return new NYColor(h, s, b);
+class BlendColor {
+    constructor(_colorCode, _blendMode = BLEND) {
+        this.color = color(_colorCode);
+        this.blendType = _blendMode;
     }
 }
 
@@ -39,7 +12,12 @@ class MorphShape {
         this.w = _w;
         this.h = _h;
         this.points = _points;
-        this.color = _color;
+        this.blendColor = _color;
+        this.drawColor = _color.color;
+
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.offsetMoveSpeed = random(0.06, 0.2);
 
         this.nowMorphStep = 0;
         this.totalMorphStep = 100;
@@ -52,7 +30,7 @@ class MorphShape {
         this.fromH = this.h;
         this.fromPoints = [];
         this.fromPointsSampled = [];
-        this.fromColor = color(this.color);
+        this.fromBlendColor = this.color;
 
         this.toX = this.x;
         this.toY = this.y;
@@ -60,7 +38,7 @@ class MorphShape {
         this.toH = this.h;
         this.toPoints = [];
         this.toPointsSampled = [];
-        this.toColor = color(this.color);
+        this.toBlendColor = this.color;
     }
 
     copy() {
@@ -68,12 +46,12 @@ class MorphShape {
         return newShape;
     }
 
-    startMorphing () {
+    startMorphing() {
         this.isMorphFinish = false;
     }
 
     setupMorphDataByShape(_toMorphShape, _steps, _morphCurve = linear) {
-        this.setupMorphData(_toMorphShape.x, _toMorphShape.y, _toMorphShape.w, _toMorphShape.h, _toMorphShape.points, _toMorphShape.color, _steps, _morphCurve);
+        this.setupMorphData(_toMorphShape.x, _toMorphShape.y, _toMorphShape.w, _toMorphShape.h, _toMorphShape.points, _toMorphShape.blendColor, _steps, _morphCurve);
     }
 
     setupMorphData(_toX, _toY, _toW, _toH, _toPoints, _toColor, _steps, _morphCurve = linear) {
@@ -82,14 +60,14 @@ class MorphShape {
         this.fromW = this.w;
         this.fromH = this.h;
         this.fromPoints = [...this.points];
-        this.fromColor = color(this.color);
+        this.fromBlendColor = this.blendColor;
 
         this.toX = _toX;
         this.toY = _toY;
         this.toW = _toW;
         this.toH = _toH;
         this.toPoints = [..._toPoints];
-        this.toColor = color(_toColor);
+        this.toBlendColor = _toColor;
 
         this.morphCurve = _morphCurve;
         this.totalMorphStep = _steps;
@@ -122,7 +100,14 @@ class MorphShape {
                 this.points[i].y = NYLerp(this.fromPoints[i].y, this.toPoints[i].y, animatedT);
             }
 
-            this.color = lerpColor(this.fromColor, this.toColor, animatedT);
+            this.nowMorphT = morphT;
+            this.drawColor = lerpColor(this.fromBlendColor.color, this.toBlendColor.color, animatedT);
+            this.blendColor.color = this.drawColor;
+
+            // if(animatedT >= 0.5)
+            //     this.blendColor.blendType = this.toBlendColor.blendType;
+            // else
+            //     this.blendColor.blendType = this.fromBlendColor.blendType;
 
             if (morphT >= 1.0) {
                 this.isMorphFinish = true;
@@ -148,9 +133,48 @@ class MorphShape {
             noStroke();
         }
 
-        fill(this.color);
+        let mouseDist = dist(mouseX, mouseY, this.x, this.y);
+        if (mouseDist < 300) {
+            let closeT = inverseLerp(300, 0, mouseDist);
+            let direction = getAngle(this.x, this.y, mouseX, mouseY);
+
+            this.offsetX -= lerp(this.offsetX, 200, closeT) * sin(radians(direction)) * this.offsetMoveSpeed;
+            this.offsetY -= lerp(this.offsetY, 200, closeT) * -cos(radians(direction)) * this.offsetMoveSpeed;
+        }
+
+        this.offsetX = lerp(this.offsetX, 0, 0.06);
+        this.offsetY = lerp(this.offsetY, 0, 0.06);
+
+        // draw twice for shape and color blending
+        if (this.nowMorphT > 0.4 && this.nowMorphT < 0.6) {
+            let fromAlpha = map(this.nowMorphT, 0.4, 0.6, 1.0, 0);
+            let toAlpha = 1.0 - fromAlpha;
+
+            let fromFillColor = this.drawColor;
+            let toFillColor = this.drawColor;
+
+            fromFillColor.setAlpha(fromAlpha);
+            toFillColor.setAlpha(toAlpha);
+
+            blendMode(this.fromBlendColor.blendType);
+            fill(this.drawColor);
+            this.drawShape();
+
+            blendMode(this.toBlendColor.blendType);
+            fill(this.drawColor);
+            this.drawShape();
+        }
+        else {
+            blendMode(this.blendColor.blendType);
+            fill(this.drawColor);
+            this.drawShape();
+        }
+
+    }
+
+    drawShape() {
         push();
-        translate(this.x, this.y);
+        translate(this.x + this.offsetX, this.y + this.offsetY);
         beginShape();
 
         for (let i = 0; i < this.points.length; i++) {
@@ -310,24 +334,19 @@ class ShapeLayer {
 }
 
 class PaletteSet {
-    constructor(_colorCodes, _bgColorCode, _specialColorCode, _normalMode, _specialMode, _specialChance = 0.03) {
+    constructor(_settingData) {
 
-        this.mainColors = [];
-        for(let i=0; i< _colorCodes.length; i++) {
-            this.mainColors.push(color(_colorCodes[i]));
-        }
-        
-        this.bgColor = color(_bgColorCode);
-        this.specialColor = color(_specialColorCode);
-        this.specialColorMode = _specialMode;
-        this.normalColorMode = _normalMode;
-        this.specialColorChance = 0.03;
+        this.shapeColors = _settingData.shapeColors;
+        this.bgColor = _settingData.bgColor;
+        this.specialColor = _settingData.specialColor;
+
+        this.specialColorChance = _settingData.specialColorChance;
     }
 
-    getRandomColor () {
-        if(random() < this.specialColorChance)
+    getRandomColor() {
+        if (random() < this.specialColorChance)
             return this.specialColor;
         else
-            return random(this.mainColors);
+            return random(this.shapeColors);
     }
 }

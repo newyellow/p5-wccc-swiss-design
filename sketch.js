@@ -47,64 +47,13 @@ async function setup() {
 
   createCanvas(canvasWidth, canvasHeight);
   flex();
-  background('#f9dcbc');
   colorMode(RGB);
-  blendMode(MULTIPLY);
 
   possibleEasings = [
     easeInOutSine, easeInOutQuad, easeInOutCubic,
   ];
 
-  let setAColorCodes = ['#e02d26', '#ffb700', '#0166be', '#0166be'];
-  palettes[0] = new PaletteSet(setAColorCodes, '#f9dcbc', '#000000', MULTIPLY, MULTIPLY);
-
-  // let setBColorCodes = ['#76e8cf', '#337cc4', '#5a18de', '#1e9e62'];
-  // palettes[1] = new PaletteSet(setBColorCodes, '#1b1f3b', '#FFFFFF', ADD, ADD);
-
   frameRate(60);
-  // layer method
-  // let layerCount = 4;
-
-  // // init layers
-  // for (let i = 0; i < layerCount; i++) {
-  //   layers.push(generateRandomShapeLayer());
-  // }
-
-  // while (true) {
-  //   // setup morph
-  //   for (let i = 0; i < layers.length; i++) {
-  //     let newTargetLayer = generateRandomShapeLayer();
-  //     setupMorphShapes(layers[i], newTargetLayer);
-
-  //     // assign new layer variables for next time morph
-  //     layers[i].xCount = newTargetLayer.xCount;
-  //     layers[i].yCount = newTargetLayer.yCount;
-  //     layers[i].layerWidth = newTargetLayer.layerWidth;
-  //     layers[i].layerHeight = newTargetLayer.layerHeight;
-  //     layers[i].startX = newTargetLayer.startX;
-  //     layers[i].startY = newTargetLayer.startY;
-  //     layers[i].possiblePoints = newTargetLayer.possiblePoints;
-  //   }
-
-  //   // start morphing
-  //   for (let i = 0; i < 200; i++) {
-  //     blendMode(BLEND);
-  //     background('#f9dcbc');
-  //     blendMode(MULTIPLY);
-
-  //     for (let l=0; l<layers.length; l++) {
-  //       for(let s=0; s< layers[l].shapes.length; s++) {
-  //         layers[l].shapes[s].morphStep();
-  //       }
-
-  //       drawLayerShapes(layers[l].shapes);
-  //     }
-
-  //     await sleep(16);
-  //   }
-  //   await sleep(200);
-  // }
-
 
   // shape method
   let bgLayer; // only one big layer
@@ -122,7 +71,7 @@ async function setup() {
     layers = [];
     bgLayer = null;
 
-    nowColorSet = random(palettes);
+    nowColorSet = getRandomColorSet();
     // for (let i = 0; i < layerCount; i++) {
     //   let randomFormatIndex = int(random(1, gridFormats.length));
     //   let newLayer = generateLayerByGridFormat(gridFormats[randomFormatIndex], 0.6);
