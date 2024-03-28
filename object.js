@@ -1,7 +1,25 @@
 class BlendColor {
     constructor(_colorCode, _blendMode = BLEND) {
-        this.color = color(_colorCode);
+        this.colorHex = _colorCode;
+        this.color = new NYRGBColor(...colorHexToRgba(_colorCode));
         this.blendType = _blendMode;
+    }
+
+    copy() {
+        return new BlendColor(this.colorHex, this.blendType);
+    }
+}
+
+class NYRGBColor {
+    constructor(_r, _g, _b, _a = 255) {
+        this.r = _r;
+        this.g = _g;
+        this.b = _b;
+        this.a = _a;
+    }
+
+    copy() {
+        return new NYRGBColor(this.r, this.g, this.b, this.a);
     }
 }
 
@@ -30,7 +48,7 @@ class MorphShape {
         this.fromH = this.h;
         this.fromPoints = [];
         this.fromPointsSampled = [];
-        this.fromBlendColor = this.color;
+        this.fromBlendColor = this.blendColor;
 
         this.toX = this.x;
         this.toY = this.y;
@@ -38,7 +56,9 @@ class MorphShape {
         this.toH = this.h;
         this.toPoints = [];
         this.toPointsSampled = [];
-        this.toBlendColor = this.color;
+        this.toBlendColor = this.blendColor;
+
+        this.alphaFadeBlending = false;
     }
 
     copy() {
@@ -60,28 +80,34 @@ class MorphShape {
         this.fromW = this.w;
         this.fromH = this.h;
         this.fromPoints = [...this.points];
-        this.fromBlendColor = this.blendColor;
+        this.fromBlendColor = this.blendColor.copy();
 
         this.toX = _toX;
         this.toY = _toY;
         this.toW = _toW;
         this.toH = _toH;
         this.toPoints = [..._toPoints];
-        this.toBlendColor = _toColor;
+        this.toBlendColor = _toColor.copy();
 
         this.morphCurve = _morphCurve;
         this.totalMorphStep = _steps;
         this.nowMorphStep = 0;
+        this.nowMorphT = 0;
+        this.nowAnimatedT = 0;
 
-        // recalculate sampled points
-        // let tempPointCount = lcm(this.fromPoints.length, this.toPoints.length);
-        // this.fromPointsSampled = resamplePoints(this.fromPoints, tempPointCount);
-        // this.toPointsSampled = resamplePoints(this.toPoints, tempPointCount);
+        // check if it needs alpha blend
+        if (this.fromBlendColor.blendType != this.toBlendColor.blendType)
+            this.alphaFadeBlending = true;
+        else
+            this.alphaFadeBlending = false;
 
         this.points = [];
         for (let i = 0; i < this.fromPoints.length; i++) {
             this.points.push(this.fromPoints[i].copy());
         }
+
+        // run first frame to do the calculation
+        this.morphStep();
     }
 
     morphStep() {
@@ -101,13 +127,13 @@ class MorphShape {
             }
 
             this.nowMorphT = morphT;
-            this.drawColor = lerpColor(this.fromBlendColor.color, this.toBlendColor.color, animatedT);
+            this.nowAnimatedT = animatedT;
+            this.drawColor = NYLerpColorRGBA(this.fromBlendColor.color, this.toBlendColor.color, animatedT);
             this.blendColor.color = this.drawColor;
 
-            // if(animatedT >= 0.5)
-            //     this.blendColor.blendType = this.toBlendColor.blendType;
-            // else
-            //     this.blendColor.blendType = this.fromBlendColor.blendType;
+            if (morphT > 0.5) {
+                this.blendColor.blendType = this.toBlendColor.blendType;
+            }
 
             if (morphT >= 1.0) {
                 this.isMorphFinish = true;
@@ -121,7 +147,8 @@ class MorphShape {
         this.y = this.toY;
         this.w = this.toW;
         this.h = this.toH;
-        this.color = this.toColor;
+        this.blendColor = this.toBlendColor.copy();
+        this.drawColor = this.toBlendColor.color.copy();
         this.points = this.toPoints;
     }
 
@@ -146,27 +173,24 @@ class MorphShape {
         this.offsetY = lerp(this.offsetY, 0, 0.06);
 
         // draw twice for shape and color blending
-        if (this.nowMorphT > 0.4 && this.nowMorphT < 0.6) {
-            let fromAlpha = map(this.nowMorphT, 0.4, 0.6, 1.0, 0);
-            let toAlpha = 1.0 - fromAlpha;
+        if (this.alphaFadeBlending) {
+            let toAlphaMultiplier = this.nowAnimatedT;
+            let fromAlphaMultiplier = 1 - this.nowAnimatedT;
 
-            let fromFillColor = this.drawColor;
-            let toFillColor = this.drawColor;
-
-            fromFillColor.setAlpha(fromAlpha);
-            toFillColor.setAlpha(toAlpha);
+            let fromAlpha = int(this.drawColor.a * fromAlphaMultiplier);
+            let toAlpha = int(this.drawColor.a * toAlphaMultiplier);
 
             blendMode(this.fromBlendColor.blendType);
-            fill(this.drawColor);
+            fill(this.drawColor.r, this.drawColor.g, this.drawColor.b, fromAlpha);
             this.drawShape();
 
             blendMode(this.toBlendColor.blendType);
-            fill(this.drawColor);
+            fill(this.drawColor.r, this.drawColor.g, this.drawColor.b, toAlpha);
             this.drawShape();
         }
         else {
             blendMode(this.blendColor.blendType);
-            fill(this.drawColor);
+            fill(this.drawColor.r, this.drawColor.g, this.drawColor.b, this.drawColor.a);
             this.drawShape();
         }
 
@@ -252,11 +276,6 @@ class ShapeLayer {
     }
 
     getRandomShape() {
-        // if (this.possiblePoints.length <= 0) {
-        //     console.log("No Available Spot");
-        //     return;
-        // }
-        // let nowSpot = this.possiblePoints.pop();
 
         let spotX = int(random(0, this.xCount));
         let spotY = int(random(0, this.yCount));
@@ -299,38 +318,6 @@ class ShapeLayer {
         let newShape = new MorphShape(shapeX, shapeY, this.layerWidth, this.layerHeight, newShapePoints, newShapeColor);
         return newShape;
     }
-
-    // addEmptyShape() {
-    //     let nowSpot = null;
-
-    //     if (this.possiblePoints.length <= 0) {
-    //         // console.log("No Available Spot for Empty Shape, assign random one");
-    //         nowSpot = {
-    //             x: int(random(0, this.xCount)),
-    //             y: int(random(0, this.yCount))
-    //         }
-    //     }
-    //     else
-    //         nowSpot = this.possiblePoints.pop();
-
-    //     let shapeX = this.startX + nowSpot.x * this.layerWidth;
-    //     let shapeY = this.startY + nowSpot.y * this.layerHeight;
-
-    //     let newShapePoints = nullShapePoints();
-    //     let newShapeColor = color('white');
-
-    //     let newShape = new MorphShape(shapeX, shapeY, this.layerWidth, this.layerHeight, newShapePoints, newShapeColor);
-    //     newShape.isEmptyShape = true;
-    //     this.shapes.push(newShape);
-    // }
-
-    // clearEmptyShapes () {
-    //     for (let i = this.shapes.length - 1; i >= 0; i--) {
-    //         if (this.shapes[i].isEmptyShape) {
-    //             this.shapes.splice(i, 1);
-    //         }
-    //     }
-    // }
 }
 
 class PaletteSet {

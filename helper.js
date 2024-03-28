@@ -230,3 +230,26 @@ function gcd(a, b) {
   }
   return gcd(b, a % b);
 }
+
+function colorHexToRgba(_hex) {
+  let r = parseInt(_hex.substring(1, 3), 16);
+  let g = parseInt(_hex.substring(3, 5), 16);
+  let b = parseInt(_hex.substring(5, 7), 16);
+  let a = 255;
+
+  if (_hex.length > 7) {
+    a = parseInt(_hex.substring(7, 9), 16);
+  }
+
+  return [r, g, b, a];
+}
+
+function NYLerpColorRGBA (_colorA, _colorB, _t)
+{
+  let r = NYLerp(_colorA.r, _colorB.r, _t);
+  let g = NYLerp(_colorA.g, _colorB.g, _t);
+  let b = NYLerp(_colorA.b, _colorB.b, _t);
+  let a = NYLerp(_colorA.a, _colorB.a, _t);
+
+  return new NYRGBColor(r, g, b, a);
+}

@@ -20,8 +20,10 @@ let possibleEasings = [];
 let shapes = [];
 
 let nowColorSet = null;
+
 let nowBGColor = null;
 let nextBGColor = null;
+let bgFillColor = null;
 
 async function setup() {
   let canvasWidth = 1800;
@@ -67,18 +69,14 @@ async function setup() {
 
   while (true) {
 
+    // pick new color set
+    nowColorSet = getRandomColorSet();
+    nextBGColor = nowColorSet.bgColor.color;
+    
     // re-generate layers
     layers = [];
     bgLayer = null;
 
-    nowColorSet = getRandomColorSet();
-    // for (let i = 0; i < layerCount; i++) {
-    //   let randomFormatIndex = int(random(1, gridFormats.length));
-    //   let newLayer = generateLayerByGridFormat(gridFormats[randomFormatIndex], 0.6);
-    //   layers.push(newLayer);
-    // }
-
-    // layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 1.0, 2, false, false));
     let layoutType = int(random(0, 5));
 
     if (layoutType == 0) {
@@ -109,7 +107,7 @@ async function setup() {
       layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.9, 2, false, false));
     }
 
-    // init first shapes
+    // generate new shapes
     let newShapes = [];
     for (let i = 0; i < shapeCount; i++) {
       let targetShapeLayer = random(layers);
@@ -125,10 +123,11 @@ async function setup() {
     // first time
     let isFirstTime = false;
     if (shapes.length == 0) {
-      for (let i = 0; i < newShapes.length; i++)
-        shapes[i] = newShapes[i];
+      shapes = newShapes;
 
       isFirstTime = true;
+      nowBGColor = nextBGColor;
+      bgFillColor = nowBGColor;
     }
     else {
       for (let i = 0; i < newShapes.length; i++) {
@@ -148,12 +147,16 @@ async function setup() {
         let animatedT = easeInQuint(t);
         let toIndex = int(animatedT * newShapes.length);
 
+        bgFillColor = NYLerpColorRGBA(nowBGColor, nextBGColor, animatedT);
+
         for (let i = nowTriggeredIndex; i < toIndex; i++) {
           shapes[i].startMorphing();
         }
         nowTriggeredIndex = toIndex;
         await sleep(30);
       }
+      bgFillColor = nextBGColor;
+      nowBGColor = nextBGColor;
 
       await sleep(3000);
     }
@@ -172,9 +175,8 @@ function draw() {
   }
 
   blendMode(BLEND);
-  background('#f9dcbc');
+  background(bgFillColor.r, bgFillColor.g, bgFillColor.b);
 
-  blendMode(MULTIPLY);
   drawLayerShapes(shapes);
 }
 
