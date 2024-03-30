@@ -25,9 +25,15 @@ let nowBGColor = null;
 let nextBGColor = null;
 let bgFillColor = null;
 
+let MOUSE_INTERACTIVE = false;
+let IS_MOUSE_OVER = false;
+
+let mainCanvas = null;
+
 async function setup() {
   let canvasWidth = 1800;
   let canvasHeight = 1200;
+
   gridFormats = [
     { x: 3, y: 2 },
     { x: 6, y: 4 },
@@ -47,9 +53,20 @@ async function setup() {
     ];
   }
 
-  createCanvas(canvasWidth, canvasHeight);
+  mainCanvas = createCanvas(canvasWidth, canvasHeight);
+  mainCanvas.mouseOver(() => {
+    IS_MOUSE_OVER = true;
+  });
+
+  mainCanvas.mouseOut(() => {
+    IS_MOUSE_OVER = false;
+  });
+  
   flex();
   colorMode(RGB);
+
+  // if not mobile, enable mouse interactive
+  MOUSE_INTERACTIVE = !checkIsMobile();
 
   possibleEasings = [
     easeInOutSine, easeInOutQuad, easeInOutCubic,
@@ -60,6 +77,7 @@ async function setup() {
   // shape method
   let bgLayer; // only one big layer
   let layers = [];
+  let bgChance = 0.1;
   let newShapes = [];
 
   let nowFillRatio = 1.0;
@@ -77,35 +95,11 @@ async function setup() {
     layers = [];
     bgLayer = null;
 
-    let layoutType = int(random(0, 5));
-
-    if (layoutType == 0) {
-      bgLayer = generateLayerByGridFormat(gridFormats[0], 0.95);
-      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.95, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.6, 2, false, false));
-    }
-    else if (layoutType == 1) {
-      bgLayer = generateLayerByGridFormat(gridFormats[1], 0.95);
-      layers.push(new ShapeLayer(gridFormats[1].x, gridFormats[1].y, 0.9, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.9, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[3].x, gridFormats[3].y, 0.9, 2, false, false));
-    }
-    else if (layoutType == 2) {
-      bgLayer = generateLayerByGridFormat(gridFormats[0], 1.0);
-      layers.push(new ShapeLayer(gridFormats[1].x, gridFormats[1].y, 1.0, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 1.0, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[3].x, gridFormats[3].y, 1.0, 2, false, false));
-    }
-    else if (layoutType == 3) {
-      bgLayer = null;
-      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.95, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[3].x, gridFormats[3].y, 0.9, 2, false, false));
-    }
-    else if (layoutType == 4) {
-      bgLayer = null;
-      layers.push(new ShapeLayer(gridFormats[1].x, gridFormats[1].y, 0.95, 2, false, false));
-      layers.push(new ShapeLayer(gridFormats[2].x, gridFormats[2].y, 0.9, 2, false, false));
-    }
+    // get layout setting
+    let layoutSetting = getRandomLayoutSet();
+    bgLayer = layoutSetting.bgLayer;
+    layers = layoutSetting.otherLayers;
+    bgChance = layoutSetting.bgChance;
 
     // generate new shapes
     let newShapes = [];
@@ -113,7 +107,7 @@ async function setup() {
       let targetShapeLayer = random(layers);
       let newShape = null;
 
-      if (bgLayer != null && random() < 0.048)
+      if (bgLayer != null && random() < bgChance)
         newShape = bgLayer.getRandomShape();
       else
         newShape = targetShapeLayer.getRandomShape();
@@ -129,14 +123,16 @@ async function setup() {
       nowBGColor = nextBGColor;
       bgFillColor = nowBGColor;
     }
-    else {
+    // else {
       for (let i = 0; i < newShapes.length; i++) {
         shapes[i].setupMorphDataByShape(newShapes[i], int(random(60, 120)), random(possibleEasings));
       }
-    }
+    // }
 
     if (isFirstTime)
+    {
       await sleep(1000);
+    }
     else {
       // start morphing
       let triggerMorhpingFrames = 120;

@@ -160,17 +160,20 @@ class MorphShape {
             noStroke();
         }
 
-        let mouseDist = dist(mouseX, mouseY, this.x, this.y);
-        if (mouseDist < 300) {
-            let closeT = inverseLerp(300, 0, mouseDist);
-            let direction = getAngle(this.x, this.y, mouseX, mouseY);
+        if (MOUSE_INTERACTIVE) {
+            let mouseDist = dist(mouseX, mouseY, this.x, this.y);
+            if (mouseDist < 300 && IS_MOUSE_OVER) {
+                let closeT = inverseLerp(300, 0, mouseDist);
+                let direction = getAngle(this.x, this.y, mouseX, mouseY);
 
-            this.offsetX -= lerp(this.offsetX, 200, closeT) * sin(radians(direction)) * this.offsetMoveSpeed;
-            this.offsetY -= lerp(this.offsetY, 200, closeT) * -cos(radians(direction)) * this.offsetMoveSpeed;
+                this.offsetX -= lerp(this.offsetX, 200, closeT) * sin(radians(direction)) * this.offsetMoveSpeed;
+                this.offsetY -= lerp(this.offsetY, 200, closeT) * -cos(radians(direction)) * this.offsetMoveSpeed;
+            }
+
+
+            this.offsetX = lerp(this.offsetX, 0, 0.06);
+            this.offsetY = lerp(this.offsetY, 0, 0.06);
         }
-
-        this.offsetX = lerp(this.offsetX, 0, 0.06);
-        this.offsetY = lerp(this.offsetY, 0, 0.06);
 
         // draw twice for shape and color blending
         if (this.alphaFadeBlending) {
@@ -288,29 +291,32 @@ class ShapeLayer {
         let shapeX = this.startX + nowSpot.x * this.layerWidth;
         let shapeY = this.startY + nowSpot.y * this.layerHeight;
 
-        let shapeType = int(random(0, 7));
+        let shapeType = int(random(0, 6));
         let newShapePoints = [];
 
-        if (shapeType == 0) {
-            newShapePoints = rectPoints(this.fillRatio);
-        }
-        else if (shapeType == 1) {
-            newShapePoints = trianglePoints(int(random(0, 4)), this.fillRatio);
-        }
-        else if (shapeType == 2) {
-            newShapePoints = LShapePoints(int(random(0, 4)), 0.3, this.fillRatio);
-        }
-        else if (shapeType == 3) {
+        // low chance to draw ellipse
+        if (random() < 0.03) {
             newShapePoints = ellipsePoints(this.fillRatio);
         }
-        else if (shapeType == 4) {
-            newShapePoints = halfCirclePoints(int(random(0, 4)), this.fillRatio);
-        }
-        else if (shapeType == 5) {
-            newShapePoints = quadCirclePoints(int(random(0, 4)), this.fillRatio);
-        }
         else {
-            newShapePoints = crystalPoints(int(random(0, 2)), 0.4, this.fillRatio);
+            if (shapeType == 0) {
+                newShapePoints = rectPoints(this.fillRatio);
+            }
+            else if (shapeType == 1) {
+                newShapePoints = trianglePoints(int(random(0, 4)), this.fillRatio);
+            }
+            else if (shapeType == 2) {
+                newShapePoints = LShapePoints(int(random(0, 4)), 0.3, this.fillRatio);
+            }
+            else if (shapeType == 3) {
+                newShapePoints = halfCirclePoints(int(random(0, 4)), this.fillRatio);
+            }
+            else if (shapeType == 4) {
+                newShapePoints = quadCirclePoints(int(random(0, 4)), this.fillRatio);
+            }
+            else {
+                newShapePoints = crystalPoints(int(random(0, 2)), 0.4, this.fillRatio);
+            }
         }
 
         let newShapeColor = nowColorSet.getRandomColor();
@@ -335,5 +341,14 @@ class PaletteSet {
             return this.specialColor;
         else
             return random(this.shapeColors);
+    }
+}
+
+class LayoutSet {
+    constructor(_bgLayer, _otherLayers, _bgChance)
+    {
+        this.bgLayer = _bgLayer;
+        this.otherLayers = _otherLayers;
+        this.bgChance = _bgChance;
     }
 }
